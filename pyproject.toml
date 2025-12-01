@@ -1,0 +1,12 @@
+[project]
+name = "vfetcher"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "colorlog>=6.10.1",
+    "rich>=14.2.0",
+    "typer>=0.20.0",
+    "yt-dlp>=2025.10.22",
+]
