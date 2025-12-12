@@ -8,5 +8,6 @@ dependencies = [
     "colorlog>=6.10.1",
     "rich>=14.2.0",
     "typer>=0.20.0",
-    "yt-dlp>=2025.10.22",
+    "yt-dlp[curl-cffi]>=2025.10.22",
+    "yt-dlp-ejs>=0.3.1",
 ]
