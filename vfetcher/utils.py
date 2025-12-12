@@ -1,5 +1,8 @@
 import logging
+import random
 import re
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
@@ -102,10 +105,38 @@ def create_progress() -> Progress:
     )
 
 
-def download_videos(video_urls: list[str], output_dir: Path, progress: Progress) -> None:
-    """Download a list of videos with progress tracking."""
+@dataclass
+class DownloadResult:
+    """Result of a download operation."""
+
+    success_count: int
+    failure_count: int
+    failed_urls: list[str]
+
+
+def download_videos(
+    video_urls: list[str],
+    output_dir: Path,
+    progress: Progress,
+    delay: float = 2.0,
+    jitter: float = 1.0,
+) -> DownloadResult:
+    """Download a list of videos with progress tracking.
+
+    Args:
+        video_urls: List of video URLs to download.
+        output_dir: Directory to save downloaded videos.
+        progress: Rich Progress instance for display.
+        delay: Base delay between downloads in seconds.
+        jitter: Random jitter range (0 to jitter) added to delay.
+
+    Returns:
+        DownloadResult with success/failure counts and failed URLs.
+    """
     ydl_opts = get_ydl_opts(output_dir)
     current_task_id = None
+    success_count = 0
+    failed_urls: list[str] = []
 
     overall_task = progress.add_task(
         "[green]Downloading videos...", total=len(video_urls)
@@ -137,16 +168,30 @@ def download_videos(video_urls: list[str], output_dir: Path, progress: Progress)
 
     ydl_opts["progress_hooks"].append(download_progress_hook)
 
-    for video_url in video_urls:
+    for i, video_url in enumerate(video_urls):
         current_task_id = progress.add_task(
             f"[cyan]Downloading {video_url}", start=False
         )
         try:
             with YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
                 ydl.download([video_url])
+            success_count += 1
             progress.update(overall_task, advance=1)
             progress.remove_task(current_task_id)
         except Exception as e:
             logger.warning(f"Failed to download video {video_url}: {e}")
+            failed_urls.append(video_url)
             progress.update(overall_task, advance=1)
             progress.remove_task(current_task_id)
+
+        # Add delay with jitter between downloads (skip after last video)
+        if i < len(video_urls) - 1:
+            sleep_time = delay + random.uniform(0, jitter)
+            logger.debug(f"Waiting {sleep_time:.1f}s before next download...")
+            time.sleep(sleep_time)
+
+    return DownloadResult(
+        success_count=success_count,
+        failure_count=len(failed_urls),
+        failed_urls=failed_urls,
+    )

@@ -30,6 +30,18 @@ def download(
         writable=True,
         resolve_path=True,
     ),
+    delay: float = typer.Option(
+        2.0,
+        "--delay",
+        "-d",
+        help="Base delay between downloads in seconds.",
+    ),
+    jitter: float = typer.Option(
+        1.0,
+        "--jitter",
+        "-j",
+        help="Random jitter range added to delay (0 to jitter seconds).",
+    ),
 ):
     """
     Downloads YouTube videos from a list of IDs.
@@ -47,9 +59,19 @@ def download(
     if skipped_count > 0:
         logger.info(f"Skipped {skipped_count} videos that were already downloaded.")
 
+    if not video_urls_to_download:
+        logger.info("No new videos to download.")
+        return
+
     logger.info(f"Proceeding to download {len(video_urls_to_download)} new videos.")
 
     with create_progress() as progress:
-        download_videos(video_urls_to_download, out, progress)
+        result = download_videos(video_urls_to_download, out, progress, delay, jitter)
 
-    logger.info("Done.")
+    logger.info(
+        f"Done. Success: {result.success_count}, Failed: {result.failure_count}, Skipped: {skipped_count}"
+    )
+    if result.failed_urls:
+        logger.warning("Failed URLs:")
+        for url in result.failed_urls:
+            logger.warning(f"  - {url}")

@@ -54,6 +54,18 @@ def channel(
         "-n",
         help="Limit to the last N videos. Downloads all videos if not specified.",
     ),
+    delay: float = typer.Option(
+        5.0,
+        "--delay",
+        "-d",
+        help="Base delay between downloads in seconds.",
+    ),
+    jitter: float = typer.Option(
+        2.0,
+        "--jitter",
+        "-j",
+        help="Random jitter range added to delay (0 to jitter seconds).",
+    ),
 ):
     """
     Downloads videos from a YouTube channel.
@@ -85,6 +97,12 @@ def channel(
     logger.info(f"Proceeding to download {len(video_urls_to_download)} new videos.")
 
     with create_progress() as progress:
-        download_videos(video_urls_to_download, out, progress)
+        result = download_videos(video_urls_to_download, out, progress, delay, jitter)
 
-    logger.info("Done.")
+    logger.info(
+        f"Done. Success: {result.success_count}, Failed: {result.failure_count}, Skipped: {skipped_count}"
+    )
+    if result.failed_urls:
+        logger.warning("Failed URLs:")
+        for failed_url in result.failed_urls:
+            logger.warning(f"  - {failed_url}")
